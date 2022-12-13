@@ -17,7 +17,7 @@ function gridData(
   this.goal = goal;
 }
 
-const getGrid = () => {
+const getGrid = (part) => {
   const inputText = fs.readFileSync("./input.txt").toString();
   //console.log(inputText);
 
@@ -109,31 +109,74 @@ const getNeighbors = (caseToCheck, fullGrid) => {
 
 const getPaths = (fullGridWithData) => {
   let frontiers = [];
-  frontiers.push(fullGridWithData.start);
-  let reacheds = [];
-  reacheds.push(fullGridWithData.start);
-  let cameFroms = [];
+  frontiers.push([fullGridWithData.start, 0]);
+  let cameFroms = {};
+  cameFroms[
+    fullGridWithData.start.x.toString() +
+      "-" +
+      fullGridWithData.start.y.toString()
+  ] = fullGridWithData.start;
+  let costFroms = {};
+  costFroms[
+    fullGridWithData.start.x.toString() +
+      "-" +
+      fullGridWithData.start.y.toString()
+  ] = 0;
 
   while (frontiers.length > 0) {
-    let current = frontiers.pop();
+    let current = frontiers.pop()[0];
     const neighbors = getNeighbors(current, fullGridWithData.gridCases);
     neighbors.forEach((neighbor) => {
+      let newCost =
+        costFroms[current.x.toString() + "-" + current.y.toString()] + 1;
       // Check if reached
       let isReached = false;
-      reacheds.forEach((alreadyReached) => {
-        if (
-          alreadyReached.x === neighbor.x &&
-          alreadyReached.y === neighbor.y
-        ) {
+
+      for (let camePath in costFroms) {
+        let xy = camePath.split("-");
+        //console.log(xy);
+        if (parseInt(xy[0]) === neighbor.x && parseInt(xy[1]) === neighbor.y) {
           isReached = true;
         }
-      });
-      if (!isReached) {
-        frontiers.push(neighbor);
-        reacheds.push(neighbor);
-        cameFroms.push([neighbor, current]);
       }
+
+      let toPush = false;
+      if (!isReached) {
+        toPush = true;
+      } else if (
+        newCost < costFroms[neighbor.x.toString() + "-" + neighbor.y.toString()]
+      ) {
+        toPush = true;
+      }
+      if (toPush) {
+        /*console.log(
+          "PUSHED: Reached? ",
+          isReached,
+          " || NewCost? ",
+          newCost,
+          " || OldCost? ",
+          costFroms[neighbor.x.toString() + "-" + neighbor.y.toString()]
+        );*/
+
+        //insert at correct location, lowest prio at last
+        let correctPos = 0;
+        for (let run = 0; run < frontiers.length; run++) {
+          if (frontiers[run][1] > newCost) {
+            correctPos++;
+          }
+        }
+        frontiers.splice(correctPos, 0, [neighbor, newCost]);
+
+        costFroms[neighbor.x.toString() + "-" + neighbor.y.toString()] =
+          newCost;
+        cameFroms[neighbor.x.toString() + "-" + neighbor.y.toString()] =
+          current;
+      } else {
+        //console.log("NOT PUSHED");
+      }
+      //console.log(cameFroms);
     });
+    //console.log(frontiers);
   }
   //console.log(cameFroms);
   return cameFroms;
@@ -142,14 +185,22 @@ const getPaths = (fullGridWithData) => {
 const getNumberMovesWithPath = (paths, start, end) => {
   let current = end;
   let steps = 0;
+
   while (current.x != start.x || current.y != start.y) {
     steps += 1;
-    paths.forEach((toFrom) => {
-      if (toFrom[0].x === current.x && toFrom[0].y === current.y) {
-        current = toFrom[1];
-        console.log(current);
+
+    for (let camePath in paths) {
+      //check sur camePath
+      let toFrom = camePath.split("-");
+      //console.log(toFrom);
+      if (
+        parseInt(toFrom[0]) === current.x &&
+        parseInt(toFrom[1]) === current.y
+      ) {
+        current = paths[camePath];
+        //console.log(current);
       }
-    });
+    }
   }
   return steps;
 };
@@ -165,7 +216,7 @@ console.log(
     "\n"
 );
 
-const gridWithData = getGrid();
+const gridWithData = getGrid(1);
 const paths = getPaths(gridWithData);
 const requiredMoves = getNumberMovesWithPath(
   paths,
@@ -176,5 +227,11 @@ const requiredMoves = getNumberMovesWithPath(
 console.log(
   "The fewest steps required to move from your current position to the location is " +
     requiredMoves +
+    "\n"
+);
+
+console.log("--- Part 2 ---");
+console.log(
+  "What is the fewest steps required to move starting from any square with elevation a to the location that should get the best signal?" +
     "\n"
 );
