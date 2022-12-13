@@ -17,7 +17,7 @@ function gridData(
   this.goal = goal;
 }
 
-const getGrid = (part) => {
+const getGrid = () => {
   const inputText = fs.readFileSync("./input.txt").toString();
   //console.log(inputText);
 
@@ -125,6 +125,7 @@ const getPaths = (fullGridWithData) => {
 
   while (frontiers.length > 0) {
     let current = frontiers.pop()[0];
+
     const neighbors = getNeighbors(current, fullGridWithData.gridCases);
     neighbors.forEach((neighbor) => {
       let newCost =
@@ -183,8 +184,22 @@ const getPaths = (fullGridWithData) => {
 };
 
 const getNumberMovesWithPath = (paths, start, end) => {
+  console.log("Start searching path");
   let current = end;
   let steps = 0;
+
+  let endExist = false;
+  for (let camePath in paths) {
+    let toFrom = camePath.split("-");
+    if (parseInt(toFrom[0]) === end.x && parseInt(toFrom[1]) === end.y) {
+      endExist = true;
+    }
+  }
+
+  if (!endExist) {
+    console.log("No goal to reach");
+    return 100000;
+  }
 
   while (current.x != start.x || current.y != start.y) {
     steps += 1;
@@ -202,7 +217,51 @@ const getNumberMovesWithPath = (paths, start, end) => {
       }
     }
   }
+  console.log("Path found in ", steps, " steps");
   return steps;
+};
+
+const getGrids = () => {
+  const inputText = fs.readFileSync("./input.txt").toString();
+  const inputParsedBlock = inputText.split("\n");
+
+  let inputParsedGrid = [];
+  let possibleStarts = [];
+  let goal = new gridCase();
+  let grids = [];
+
+  for (let i = 0; i < inputParsedBlock.length; i++) {
+    let row = [];
+    for (let j = 0; j < inputParsedBlock[i].length; j++) {
+      row.push(new gridCase(j, i, parseInt(inputParsedBlock[i][j], 36) - 9));
+      if (inputParsedBlock[i][j] === "S") {
+        row[j].level = parseInt("a", 36) - 9;
+        possibleStarts.push(new gridCase(j, i, parseInt("a", 36) - 9));
+      } else if (inputParsedBlock[i][j] === "E") {
+        row[j].level = parseInt("z", 36) - 9;
+        goal = new gridCase(j, i, parseInt("z", 36) - 9);
+      } else if (inputParsedBlock[i][j] === "a") {
+        possibleStarts.push(new gridCase(j, i, parseInt("a", 36) - 9));
+      }
+    }
+    inputParsedGrid.push(row);
+  }
+
+  possibleStarts.forEach((start) => {
+    grids.push(new gridData(inputParsedGrid, start, goal));
+  });
+
+  return grids;
+};
+
+const getLowestMoves = (moves) => {
+  let miniMoves = moves[0];
+  for (let i = 1; i < moves.length; i++) {
+    if (moves[i] < miniMoves) {
+      miniMoves = moves[i];
+    }
+  }
+  return miniMoves;
 };
 
 /* -- Exec. -- */
@@ -216,7 +275,7 @@ console.log(
     "\n"
 );
 
-const gridWithData = getGrid(1);
+const gridWithData = getGrid();
 const paths = getPaths(gridWithData);
 const requiredMoves = getNumberMovesWithPath(
   paths,
@@ -233,5 +292,36 @@ console.log(
 console.log("--- Part 2 ---");
 console.log(
   "What is the fewest steps required to move starting from any square with elevation a to the location that should get the best signal?" +
+    "\n"
+);
+
+const gridsWithData = getGrids();
+console.log(
+  "There are " + gridsWithData.length + " possible locations to start from"
+);
+let multiplePaths = [];
+let counter = 1;
+gridsWithData.forEach((grid) => {
+  console.log("Start path ", counter);
+  multiplePaths.push(getPaths(grid));
+  counter++;
+});
+let multipleRequiredMoves = [];
+for (let i = 0; i < multiplePaths.length; i++) {
+  multipleRequiredMoves.push(
+    getNumberMovesWithPath(
+      multiplePaths[i],
+      gridsWithData[i].start,
+      gridsWithData[i].goal
+    )
+  );
+}
+let miniMoves = getLowestMoves(multipleRequiredMoves);
+
+//Check si on toruve toujours une path to the end, sinon boucle infini dans le get number moves
+
+console.log(
+  "The fewest steps required to move starting from any square with elevation a to the location is " +
+    miniMoves +
     "\n"
 );
