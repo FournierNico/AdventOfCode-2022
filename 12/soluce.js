@@ -1,5 +1,4 @@
 var fs = require("fs");
-const path = require("path");
 
 function gridCase(x = -1, y = -1, level = -1) {
   this.x = x;
